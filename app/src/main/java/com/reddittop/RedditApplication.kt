@@ -10,8 +10,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class RedditApplication : Application() {
 
+    lateinit var redditApi : RedditApi
+
     override fun onCreate() {
         super.onCreate()
+        redditApi = createRedditApi()
     }
 
 
