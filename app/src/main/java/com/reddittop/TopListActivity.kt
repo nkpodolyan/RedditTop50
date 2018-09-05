@@ -1,9 +1,10 @@
-package com.top50.redit.reddittop50
+package com.reddittop
 
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v7.app.AppCompatActivity
+import com.top50.redit.reddittop50.R
 
-class RedditsListActivity : AppCompatActivity() {
+class TopListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
