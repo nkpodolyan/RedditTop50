@@ -38,7 +38,7 @@ class TopListViewModel constructor(application: Application) : AndroidViewModel(
                             items.addAll(response.data.children)
                             publisher.onNext(state)
                         },
-                        { e ->
+                        { _ ->
                             loadState = LoadState.LOAD_ERROR
                             publisher.onNext(state)
                         })

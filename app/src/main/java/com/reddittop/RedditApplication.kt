@@ -1,6 +1,8 @@
 package com.reddittop
 
 import android.app.Application
+import com.bumptech.glide.annotation.GlideModule
+import com.bumptech.glide.module.AppGlideModule
 import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import io.reactivex.schedulers.Schedulers
@@ -31,3 +33,6 @@ class RedditApplication : Application() {
     }
 
 }
+
+@GlideModule
+class AppGlideModule : AppGlideModule()
