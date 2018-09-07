@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -60,9 +59,9 @@ class TopListActivity : AppCompatActivity() {
     private fun adjustUi(state: TopListViewModel.State?) {
         state?.let {
             val lastItem = when (it.loadStatus) {
-                TopListViewModel.LoadStatus.LOADED -> RedditsAdapter.LastItem.NONE
-                TopListViewModel.LoadStatus.LOADING -> RedditsAdapter.LastItem.PROGRESS
-                TopListViewModel.LoadStatus.LOAD_ERROR -> RedditsAdapter.LastItem.RETRY
+                TopListViewModel.LoadStatus.LOADED -> RedditsAdapter.TailItem.NONE
+                TopListViewModel.LoadStatus.LOADING -> RedditsAdapter.TailItem.PROGRESS
+                TopListViewModel.LoadStatus.LOAD_ERROR -> RedditsAdapter.TailItem.RETRY
             }
             adapter.setData(it.items, lastItem)
         }
@@ -71,25 +70,15 @@ class TopListActivity : AppCompatActivity() {
 
     class RedditsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        enum class LastItem {
-            NONE, PROGRESS, RETRY
-        }
-
-        companion object {
-            const val TYPE_ITEM = R.layout.raw_reddit
-            const val TYPE_PROGRESS = R.layout.raw_progress
-            const val TYPE_RETRY = R.layout.raw_retry
-        }
-
         private var retryHandler: (() -> Unit)? = null
-        private val items = ArrayList<Item>()
-        private var lastItem = LastItem.NONE
+        private val items = ArrayList<TopListViewModel.RedditItem>()
+        private var lastItem = TailItem.NONE
 
         fun setRetryHandler(retryHandler: () -> Unit) {
             this.retryHandler = retryHandler
         }
 
-        fun setData(items: List<Item>, lastItem: LastItem) {
+        fun setData(items: List<TopListViewModel.RedditItem>, lastItem: TailItem) {
             this.items.clear()
             this.items.addAll(items)
             this.lastItem = lastItem
@@ -106,7 +95,7 @@ class TopListActivity : AppCompatActivity() {
 
         override fun getItemViewType(position: Int): Int =
                 if (position == items.size) {
-                    if (lastItem == LastItem.PROGRESS) {
+                    if (lastItem == TailItem.PROGRESS) {
                         TYPE_PROGRESS
                     } else {
                         TYPE_RETRY
@@ -117,7 +106,7 @@ class TopListActivity : AppCompatActivity() {
 
 
         override fun getItemCount(): Int =
-                if (lastItem == LastItem.NONE) {
+                if (lastItem == TailItem.NONE) {
                     items.size
                 } else
                     items.size + 1
@@ -146,19 +135,29 @@ class TopListActivity : AppCompatActivity() {
             }
             return object : RecyclerView.ViewHolder(view) {}
         }
+
+        enum class TailItem {
+            NONE, PROGRESS, RETRY
+        }
+
+        companion object {
+            const val TYPE_ITEM = R.layout.raw_reddit
+            const val TYPE_PROGRESS = R.layout.raw_progress
+            const val TYPE_RETRY = R.layout.raw_retry
+        }
     }
 
 
     class RedditHolder(override val containerView: View) : RecyclerView.ViewHolder(containerView), LayoutContainer {
 
-        fun bind(item: Item) {
+        fun bind(item: TopListViewModel.RedditItem) {
             val context = itemTitle.context
-            val thumbnailUrl = item.data.thumbnail
-            itemTitle.text = item.data.title
-            author.text = context.getString(R.string.by, item.data.author)
-            date.text = DateUtils.getRelativeTimeSpanString(item.data.createdUtc * 1000)
-            comments.text = context.getString(R.string.comments, item.data.numComments)
-            itemImage.visibility = if (URLUtil.isValidUrl(item.data.thumbnail)) {
+            val thumbnailUrl = item.thumbnail
+            itemTitle.text = item.title
+            author.text = context.getString(R.string.by, item.author)
+            date.text = item.date
+            comments.text = context.getString(R.string.comments, item.comments)
+            itemImage.visibility = if (URLUtil.isValidUrl(thumbnailUrl)) {
                 GlideApp.with(containerView.context)
                         .load(thumbnailUrl)
                         .fitCenter()
