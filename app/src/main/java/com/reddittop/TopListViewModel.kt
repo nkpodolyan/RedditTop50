@@ -3,47 +3,64 @@ package com.reddittop
 import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.LiveDataReactiveStreams
-import io.reactivex.BackpressureStrategy
+import android.arch.lifecycle.MutableLiveData
+import android.util.Log
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.subjects.PublishSubject
 
 
 class TopListViewModel constructor(application: Application) : AndroidViewModel(application) {
 
-    enum class LoadState {
-        LOADING, LOADED, LOAD_ERROR
-    }
-
-    data class State(val loadState: TopListViewModel.LoadState, val items: List<Item>?)
-
-    private var loadState = LoadState.LOADING
-
+    private val statLiveData = MutableLiveData<State>()
+    private var loadState = LoadStatus.LOADING
     private val items = ArrayList<Item>()
-
-    val state: State
-        get() = State(loadState, items)
-
-    private val publisher = PublishSubject.create<State>()
-
+    private var endOfListReached = false
     private val redditApi: RedditApi = (application as RedditApplication).redditApi
+    val state: State
+        get() = State(loadState, items, !endOfListReached && items.size < MAX_ITEMS)
+
 
     init {
-        publisher.onNext(TopListViewModel.State(LoadState.LOADING, null))
-        redditApi.top(limit = 50)
+        performNextPageLoad()
+    }
+
+    fun getTop(): LiveData<State> = statLiveData
+
+    fun loadNext() {
+        if (!state.hasMoreToLoad || state.loadStatus == LoadStatus.LOADING) return
+        performNextPageLoad()
+    }
+
+    private fun performNextPageLoad() {
+        loadState = LoadStatus.LOADING
+        statLiveData.postValue(state)
+        val after = if (items.isEmpty()) null else {
+            val lastItem = items[items.size - 1]
+            "${lastItem.kind}_${lastItem.data.id}"
+        }
+        redditApi.top(limit = PAGE_SIZE, after = after)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         { response ->
-                            loadState = LoadState.LOADED
+                            loadState = LoadStatus.LOADED
                             items.addAll(response.data.children)
-                            publisher.onNext(state)
+                            endOfListReached = items.size < PAGE_SIZE
+                            statLiveData.postValue(state)
                         },
-                        { _ ->
-                            loadState = LoadState.LOAD_ERROR
-                            publisher.onNext(state)
+                        { e ->
+                            Log.e("error while loading", "", e)
+                            loadState = LoadStatus.LOAD_ERROR
+                            statLiveData.postValue(state)
                         })
     }
 
-    fun getTop(): LiveData<State> = LiveDataReactiveStreams.fromPublisher(publisher.toFlowable(BackpressureStrategy.LATEST))
+    enum class LoadStatus {
+        LOADING, LOADED, LOAD_ERROR
+    }
 
+    data class State(val loadStatus: TopListViewModel.LoadStatus, val items: List<Item>, val hasMoreToLoad: Boolean)
+
+    companion object {
+        const val MAX_ITEMS = 50
+        const val PAGE_SIZE = 10
+    }
 }

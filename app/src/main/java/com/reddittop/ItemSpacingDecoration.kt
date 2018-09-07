@@ -6,16 +6,17 @@ import android.support.v7.widget.RecyclerView
 import android.util.TypedValue
 import android.view.View
 
-class ItemSpacingDecoration(spaceingInDp: Float, context: Context) : RecyclerView.ItemDecoration() {
+class ItemSpacingDecoration(spacingDp: Float, context: Context) : RecyclerView.ItemDecoration() {
 
-    var spacingInPixels: Float
-
-    init {
-        spacingInPixels = context.dipToPixels(spaceingInDp)
-    }
+    private var spacingInPixels: Float = context.dipToPixels(spacingDp)
 
     override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
-        outRect.bottom = spacingInPixels.toInt()
+        val position = parent.getChildAdapterPosition(view)
+        val itemCount = parent.adapter?.itemCount ?: 0
+        //do not add spacing for last item
+        if (position < itemCount - 1) {
+            outRect.bottom = spacingInPixels.toInt()
+        }
     }
 }
 

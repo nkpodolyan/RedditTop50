@@ -11,70 +11,153 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.URLUtil
+import android.widget.Button
 import kotlinx.android.extensions.LayoutContainer
 import kotlinx.android.synthetic.main.activity_reddits_list.*
 import kotlinx.android.synthetic.main.raw_reddit.*
+import kotlinx.android.synthetic.main.raw_retry.view.*
 
 
 class TopListActivity : AppCompatActivity() {
 
-    val adapter = ItemsAdapter()
+    private val adapter = RedditsAdapter()
+    lateinit var model: TopListViewModel
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_reddits_list)
-        val model = ViewModelProviders.of(this).get(TopListViewModel::class.java)
+        model = ViewModelProviders.of(this).get(TopListViewModel::class.java)
         model.getTop().observe(this, Observer<TopListViewModel.State> { state -> adjustUi(state) })
+        setUpRecyclerView()
         adjustUi(model.state)
+    }
 
+    private fun setUpRecyclerView() {
         val itemDecoration = ItemSpacingDecoration(16F, applicationContext)
-        itemsList.layoutManager = LinearLayoutManager(this)
+        val layoutManager = LinearLayoutManager(this)
+        adapter.setRetryHandler { model.loadNext() }
+        itemsList.layoutManager = layoutManager
         itemsList.setHasFixedSize(true)
         itemsList.adapter = adapter
         itemsList.addItemDecoration(itemDecoration)
+        itemsList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
 
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val visibleItemCount = layoutManager.childCount
+                val totalItemCount = layoutManager.itemCount
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+                if (model.state.loadStatus == TopListViewModel.LoadStatus.LOADED && model.state.hasMoreToLoad) {
+                    if (visibleItemCount + firstVisibleItemPosition >= totalItemCount && totalItemCount > 1) {
+                        model.loadNext()
+                    }
+                }
+            }
+        })
     }
 
 
     private fun adjustUi(state: TopListViewModel.State?) {
-        val loading = state?.loadState == TopListViewModel.LoadState.LOADING
-        progress.visibility = if (loading) View.VISIBLE else View.GONE
-        adapter.setItems(state?.items ?: ArrayList())
+        state?.let {
+            val lastItem = when (it.loadStatus) {
+                TopListViewModel.LoadStatus.LOADED -> RedditsAdapter.LastItem.NONE
+                TopListViewModel.LoadStatus.LOADING -> RedditsAdapter.LastItem.PROGRESS
+                TopListViewModel.LoadStatus.LOAD_ERROR -> RedditsAdapter.LastItem.RETRY
+            }
+            adapter.setData(it.items, lastItem)
+        }
     }
 
-    class ItemsAdapter : RecyclerView.Adapter<ItemHolder>() {
 
+    class RedditsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        enum class LastItem {
+            NONE, PROGRESS, RETRY
+        }
+
+        companion object {
+            const val TYPE_ITEM = R.layout.raw_reddit
+            const val TYPE_PROGRESS = R.layout.raw_progress
+            const val TYPE_RETRY = R.layout.raw_retry
+        }
+
+        private var retryHandler: (() -> Unit)? = null
         private val items = ArrayList<Item>()
+        private var lastItem = LastItem.NONE
 
-        fun setItems(items: List<Item>) {
+        fun setRetryHandler(retryHandler: () -> Unit) {
+            this.retryHandler = retryHandler
+        }
+
+        fun setData(items: List<Item>, lastItem: LastItem) {
             this.items.clear()
             this.items.addAll(items)
+            this.lastItem = lastItem
             notifyDataSetChanged()
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, position: Int): ItemHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, type: Int): RecyclerView.ViewHolder =
+                when (type) {
+                    TYPE_PROGRESS -> createProgressHolder(parent)
+                    TYPE_RETRY -> createRetryHolder(parent)
+                    else ->
+                        createItemHolder(parent)
+                }
+
+        override fun getItemViewType(position: Int): Int =
+                if (position == items.size) {
+                    if (lastItem == LastItem.PROGRESS) {
+                        TYPE_PROGRESS
+                    } else {
+                        TYPE_RETRY
+                    }
+                } else {
+                    TYPE_ITEM
+                }
+
+
+        override fun getItemCount(): Int =
+                if (lastItem == LastItem.NONE) {
+                    items.size
+                } else
+                    items.size + 1
+
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (getItemViewType(position)) {
+                TYPE_ITEM -> (holder as RedditHolder).bind(items[position])
+            }
+        }
+
+        private fun createItemHolder(parent: ViewGroup): RedditHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.raw_reddit, parent, false)
-            return ItemHolder(view)
+            return RedditHolder(view)
         }
 
-        override fun getItemCount(): Int = items.size
-
-        override fun onBindViewHolder(holder: ItemHolder, position: Int) {
-            holder.bind(items[position])
+        private fun createProgressHolder(parent: ViewGroup): RecyclerView.ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.raw_progress, parent, false)
+            return object : RecyclerView.ViewHolder(view) {}
         }
 
+        private fun createRetryHolder(parent: ViewGroup): RecyclerView.ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.raw_retry, parent, false)
+            (view.retryButton as Button).setOnClickListener {
+                retryHandler?.invoke()
+            }
+            return object : RecyclerView.ViewHolder(view) {}
+        }
     }
 
-    class ItemHolder(override val containerView: View) : RecyclerView.ViewHolder(containerView), LayoutContainer {
+
+    class RedditHolder(override val containerView: View) : RecyclerView.ViewHolder(containerView), LayoutContainer {
 
         fun bind(item: Item) {
             val context = itemTitle.context
+            val thumbnailUrl = item.data.thumbnail
             itemTitle.text = item.data.title
             author.text = context.getString(R.string.by, item.data.author)
             date.text = DateUtils.getRelativeTimeSpanString(item.data.createdUtc * 1000)
             comments.text = context.getString(R.string.comments, item.data.numComments)
-            val thumbnailUrl = item.data.thumbnail
             itemImage.visibility = if (URLUtil.isValidUrl(item.data.thumbnail)) {
                 GlideApp.with(containerView.context)
                         .load(thumbnailUrl)
