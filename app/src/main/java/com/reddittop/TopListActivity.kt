@@ -35,7 +35,7 @@ class TopListActivity : AppCompatActivity() {
     private fun setUpRecyclerView() {
         val itemDecoration = ItemSpacingDecoration(16F, applicationContext)
         val layoutManager = LinearLayoutManager(this)
-        adapter.setRetryHandler { model.loadNext() }
+        adapter.setRetryHandler { model.loadNextPage() }
         adapter.setImageHandler { url -> FullSizedImageActivity.start(this, url) }
         itemsList.layoutManager = layoutManager
         itemsList.setHasFixedSize(true)
@@ -49,7 +49,7 @@ class TopListActivity : AppCompatActivity() {
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
                 if (model.state.loadStatus == TopListViewModel.LoadStatus.LOADED && model.state.hasMoreToLoad) {
                     if (visibleItemCount + firstVisibleItemPosition >= totalItemCount && totalItemCount > 1) {
-                        model.loadNext()
+                        model.loadNextPage()
                     }
                 }
             }

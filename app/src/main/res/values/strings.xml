@@ -7,4 +7,9 @@
     <string name="could_not_load_content">Could not load content</string>
     <string name="full_size_image">full size image</string>
     <string name="menu_save_to_gallery">Save to gallery</string>
+    <string name="loading_started">Image loading started</string>
+    <string name="missing_permission_explanation">Write storage permission required</string>
+    <string name="grant">Grant</string>
+    <string name="permission_dialog_title">Permission required</string>
+    <string name="write_storage_permision_retionale">Please allow application access to devise storage to save image to gallery.</string>
 </resources>
