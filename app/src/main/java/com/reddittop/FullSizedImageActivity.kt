@@ -6,6 +6,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -17,6 +18,11 @@ import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import kotlinx.android.synthetic.main.activity_full_sized_image.*
 import java.io.File
 import java.util.*
@@ -34,9 +40,33 @@ class FullSizedImageActivity : AppCompatActivity() {
             it.setHomeButtonEnabled(true)
             it.setDisplayHomeAsUpEnabled(true)
         }
+        retryButton.setOnClickListener { loadImage() }
+        loadImage()
+    }
+
+    private fun loadImage() {
+        retryButton.visibility = View.GONE
+        progress.visibility = View.VISIBLE
         GlideApp.with(this)
                 .load(pictureUrl)
                 .fitCenter()
+                .listener(object : RequestListener<Drawable> {
+
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?,
+                                              isFirstResource: Boolean): Boolean {
+                        retryButton.visibility = View.VISIBLE
+                        progress.visibility = View.GONE
+                        Snackbar.make(image, getString(R.string.could_not_load_image), Snackbar.LENGTH_SHORT).show()
+                        return false
+                    }
+
+                    override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
+                                                 dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        retryButton.visibility = View.GONE
+                        progress.visibility = View.GONE
+                        return false
+                    }
+                })
                 .into(image)
     }
 
