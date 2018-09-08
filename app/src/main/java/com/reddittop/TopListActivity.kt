@@ -6,10 +6,10 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.URLUtil
 import android.widget.Button
 import kotlinx.android.extensions.LayoutContainer
 import kotlinx.android.synthetic.main.activity_reddits_list.*
@@ -36,6 +36,7 @@ class TopListActivity : AppCompatActivity() {
         val itemDecoration = ItemSpacingDecoration(16F, applicationContext)
         val layoutManager = LinearLayoutManager(this)
         adapter.setRetryHandler { model.loadNext() }
+        adapter.setImageHandler { url -> FullSizedImageActivity.start(this, url) }
         itemsList.layoutManager = layoutManager
         itemsList.setHasFixedSize(true)
         itemsList.adapter = adapter
@@ -70,12 +71,17 @@ class TopListActivity : AppCompatActivity() {
 
     class RedditsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        private var retryHandler: (() -> Unit)? = null
+        private var retryClickListener: (() -> Unit)? = null
+        private var imageClickListener: ((String) -> Unit)? = null
         private val items = ArrayList<TopListViewModel.RedditItem>()
         private var lastItem = TailItem.NONE
 
         fun setRetryHandler(retryHandler: () -> Unit) {
-            this.retryHandler = retryHandler
+            this.retryClickListener = retryHandler
+        }
+
+        fun setImageHandler(imageHandler: (String) -> Unit) {
+            this.imageClickListener = imageHandler
         }
 
         fun setData(items: List<TopListViewModel.RedditItem>, lastItem: TailItem) {
@@ -120,7 +126,13 @@ class TopListActivity : AppCompatActivity() {
 
         private fun createItemHolder(parent: ViewGroup): RedditHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.raw_reddit, parent, false)
-            return RedditHolder(view)
+            return RedditHolder(view).also { holder ->
+                holder.itemImage.setOnClickListener {
+                    if (!TextUtils.isEmpty(holder.redditItem?.fullSizeImageUrl)) {
+                        imageClickListener?.invoke(holder.redditItem!!.fullSizeImageUrl)
+                    }
+                }
+            }
         }
 
         private fun createProgressHolder(parent: ViewGroup): RecyclerView.ViewHolder {
@@ -131,7 +143,7 @@ class TopListActivity : AppCompatActivity() {
         private fun createRetryHolder(parent: ViewGroup): RecyclerView.ViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.raw_retry, parent, false)
             (view.retryButton as Button).setOnClickListener {
-                retryHandler?.invoke()
+                retryClickListener?.invoke()
             }
             return object : RecyclerView.ViewHolder(view) {}
         }
@@ -150,21 +162,25 @@ class TopListActivity : AppCompatActivity() {
 
     class RedditHolder(override val containerView: View) : RecyclerView.ViewHolder(containerView), LayoutContainer {
 
+        var redditItem: TopListViewModel.RedditItem? = null
+
         fun bind(item: TopListViewModel.RedditItem) {
+            redditItem = item
             val context = itemTitle.context
             val thumbnailUrl = item.thumbnail
             itemTitle.text = item.title
             author.text = context.getString(R.string.by, item.author)
             date.text = item.date
             comments.text = context.getString(R.string.comments, item.comments)
-            itemImage.visibility = if (URLUtil.isValidUrl(thumbnailUrl)) {
+            itemImage.visibility = if (thumbnailUrl.isEmpty()) {
+                View.GONE
+            } else {
                 GlideApp.with(containerView.context)
                         .load(thumbnailUrl)
                         .fitCenter()
                         .into(itemImage)
                 View.VISIBLE
-            } else
-                View.GONE
+            }
         }
     }
 }
