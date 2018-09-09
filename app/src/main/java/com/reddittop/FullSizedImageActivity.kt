@@ -2,6 +2,7 @@ package com.reddittop
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityOptions
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
@@ -14,11 +15,13 @@ import android.provider.Settings
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v4.view.ViewCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.ImageView
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
@@ -30,21 +33,22 @@ import java.util.*
 
 class FullSizedImageActivity : AppCompatActivity() {
 
-    val pictureUrl: String
-        get() = intent.getStringExtra(URL_KEY)
+    private val pictureUrl: String
+        get() = intent.getStringExtra(IMAGE_URL_KEY)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_full_sized_image)
+        ViewCompat.setTransitionName(image, SHARED_IMAGE_NAME)
         supportActionBar?.also {
             it.setHomeButtonEnabled(true)
             it.setDisplayHomeAsUpEnabled(true)
         }
-        retryButton.setOnClickListener { loadImage() }
-        loadImage()
+        retryButton.setOnClickListener { loadFullSizeImage() }
+        loadFullSizeImage()
     }
 
-    private fun loadImage() {
+    private fun loadFullSizeImage() {
         retryButton.visibility = View.GONE
         progress.visibility = View.VISIBLE
         GlideApp.with(this)
@@ -156,10 +160,16 @@ class FullSizedImageActivity : AppCompatActivity() {
     companion object {
 
         const val MY_PERMISSIONS_REQUEST_READ_CONTACTS = 0
-        const val URL_KEY = "url"
+        const val IMAGE_URL_KEY = "url"
+        const val SHARED_IMAGE_NAME = "image"
 
-        fun start(context: Activity, url: String) {
-            context.startActivity(Intent(context, FullSizedImageActivity::class.java).also { it.putExtra(URL_KEY, url) })
+        fun start(context: Activity,
+                  fullImageUrl: String,
+                  image: ImageView) {
+            val options = ActivityOptions.makeSceneTransitionAnimation(context, image, SHARED_IMAGE_NAME)
+            val intent = Intent(context,
+                    FullSizedImageActivity::class.java).also { it.putExtra(IMAGE_URL_KEY, fullImageUrl) }
+            context.startActivity(intent, options.toBundle())
         }
     }
 }

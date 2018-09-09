@@ -2,7 +2,8 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <ImageView
         android:id="@+id/image"
@@ -10,7 +11,7 @@
         android:layout_height="0dp"
         android:background="@android:color/black"
         android:contentDescription="@string/full_size_image"
-        android:src="@mipmap/ic_launcher"
+        tools:src="@mipmap/ic_launcher"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -19,6 +20,7 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <ProgressBar
+        android:visibility="gone"
         android:id="@+id/progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -28,6 +30,7 @@
         app:layout_constraintTop_toTopOf="@+id/image" />
 
     <Button
+        android:visibility="gone"
         android:id="@+id/retryButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

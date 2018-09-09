@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import kotlinx.android.extensions.LayoutContainer
 import kotlinx.android.synthetic.main.activity_reddits_list.*
 import kotlinx.android.synthetic.main.raw_reddit.*
@@ -36,7 +37,7 @@ class TopListActivity : AppCompatActivity() {
         val itemDecoration = ItemSpacingDecoration(16F, applicationContext)
         val layoutManager = LinearLayoutManager(this)
         adapter.setRetryHandler { model.loadNextPage() }
-        adapter.setImageHandler { url -> FullSizedImageActivity.start(this, url) }
+        adapter.setImageHandler { item, imageView -> FullSizedImageActivity.start(this, item.fullSizeImageUrl, imageView) }
         itemsList.layoutManager = layoutManager
         itemsList.setHasFixedSize(true)
         itemsList.adapter = adapter
@@ -72,7 +73,7 @@ class TopListActivity : AppCompatActivity() {
     class RedditsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         private var retryClickListener: (() -> Unit)? = null
-        private var imageClickListener: ((String) -> Unit)? = null
+        private var imageClickListener: ((TopListViewModel.RedditItem, ImageView) -> Unit)? = null
         private val items = ArrayList<TopListViewModel.RedditItem>()
         private var lastItem = TailItem.NONE
 
@@ -80,7 +81,7 @@ class TopListActivity : AppCompatActivity() {
             this.retryClickListener = retryHandler
         }
 
-        fun setImageHandler(imageHandler: (String) -> Unit) {
+        fun setImageHandler(imageHandler: (TopListViewModel.RedditItem, ImageView) -> Unit) {
             this.imageClickListener = imageHandler
         }
 
@@ -129,7 +130,7 @@ class TopListActivity : AppCompatActivity() {
             return RedditHolder(view).also { holder ->
                 holder.itemImage.setOnClickListener {
                     if (!TextUtils.isEmpty(holder.redditItem?.fullSizeImageUrl)) {
-                        imageClickListener?.invoke(holder.redditItem!!.fullSizeImageUrl)
+                        imageClickListener?.invoke(holder.redditItem!!, holder.itemImage)
                     }
                 }
             }
