@@ -4,6 +4,7 @@ import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
+import android.support.annotation.VisibleForTesting
 import android.text.format.DateUtils
 import android.webkit.URLUtil
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -12,9 +13,9 @@ import java.net.URI
 
 class TopListViewModel constructor(application: Application) : AndroidViewModel(application) {
 
+    @VisibleForTesting val items = ArrayList<Item>()
     private val stateLiveData = MutableLiveData<State>()
     private var loadState = LoadStatus.LOADING
-    private val items = ArrayList<Item>()
     private var endOfListReached = false
     private val redditApi: RedditApi = (application as RedditApplication).redditApi
     val state: State
