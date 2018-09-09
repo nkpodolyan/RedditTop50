@@ -35,6 +35,7 @@ class FullSizedImageActivity : AppCompatActivity() {
 
     private val pictureUrl: String
         get() = intent.getStringExtra(IMAGE_URL_KEY)
+    private var imageLoadingState: ImageLoadingState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,30 +49,10 @@ class FullSizedImageActivity : AppCompatActivity() {
         loadFullSizeImage()
     }
 
-    private fun loadFullSizeImage() {
-        retryButton.visibility = View.GONE
-        progress.visibility = View.VISIBLE
-        GlideApp.with(this)
-                .load(pictureUrl)
-                .fitCenter()
-                .listener(object : RequestListener<Drawable> {
-
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?,
-                                              isFirstResource: Boolean): Boolean {
-                        retryButton.visibility = View.VISIBLE
-                        progress.visibility = View.GONE
-                        Snackbar.make(image, getString(R.string.could_not_load_image), Snackbar.LENGTH_SHORT).show()
-                        return false
-                    }
-
-                    override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
-                                                 dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                        retryButton.visibility = View.GONE
-                        progress.visibility = View.GONE
-                        return false
-                    }
-                })
-                .into(image)
+    override fun onResume() {
+        super.onResume()
+        //fix of transition animation changes progress bar visibility to visible
+        adjustUiToImageLoadingState()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -108,6 +89,39 @@ class FullSizedImageActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun setImageLoadStateAdjustUi(state: ImageLoadingState) {
+        imageLoadingState = state
+        adjustUiToImageLoadingState()
+    }
+
+    private fun adjustUiToImageLoadingState() {
+        retryButton.visibility = if (imageLoadingState == ImageLoadingState.LOADING) View.VISIBLE else View.GONE
+        retryButton.visibility = if (imageLoadingState == ImageLoadingState.LOAD_ERROR) View.VISIBLE else View.GONE
+    }
+
+    private fun loadFullSizeImage() {
+        setImageLoadStateAdjustUi(ImageLoadingState.LOADING)
+        GlideApp.with(this)
+                .load(pictureUrl)
+                .fitCenter()
+                .listener(object : RequestListener<Drawable> {
+
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?,
+                                              isFirstResource: Boolean): Boolean {
+                        setImageLoadStateAdjustUi(ImageLoadingState.LOAD_ERROR)
+                        Snackbar.make(image, getString(R.string.could_not_load_image), Snackbar.LENGTH_SHORT).show()
+                        return false
+                    }
+
+                    override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
+                                                 dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        setImageLoadStateAdjustUi(ImageLoadingState.LOADED)
+                        return false
+                    }
+                })
+                .into(image)
     }
 
 
@@ -158,6 +172,10 @@ class FullSizedImageActivity : AppCompatActivity() {
 
 
     companion object {
+
+        private enum class ImageLoadingState {
+            LOADING, LOADED, LOAD_ERROR
+        }
 
         const val MY_PERMISSIONS_REQUEST_READ_CONTACTS = 0
         const val IMAGE_URL_KEY = "url"

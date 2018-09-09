@@ -13,7 +13,8 @@ import java.net.URI
 
 class TopListViewModel constructor(application: Application) : AndroidViewModel(application) {
 
-    @VisibleForTesting val items = ArrayList<Item>()
+    @VisibleForTesting
+    val items = ArrayList<Item>()
     private val stateLiveData = MutableLiveData<State>()
     private var loadState = LoadStatus.LOADING
     private var endOfListReached = false
@@ -91,8 +92,8 @@ class TopListViewModel constructor(application: Application) : AndroidViewModel(
             else previewImages[0].source?.url
 
             return RedditItem(itemData?.title ?: "",
-                    DateUtils.getRelativeTimeSpanString(itemData?.createdUtc ?: 0
-                    * 1000).toString(),
+                    DateUtils.getRelativeTimeSpanString(itemData?.createdUtc?.times(1000)
+                            ?: 0).toString(),
                     itemData?.author ?: "",
                     itemData?.numComments ?: 0,
                     if (URLUtil.isValidUrl(thumbnail)) thumbnail else "",
